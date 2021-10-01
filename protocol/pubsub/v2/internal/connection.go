@@ -41,6 +41,9 @@ type Connection struct {
 
 	Client *pubsub.Client
 
+	// MessageOrdering enables message ordering for all topics and subscriptions.
+	MessageOrdering bool
+
 	TopicID   string
 	topicInfo *topicInfo
 
@@ -98,6 +101,7 @@ func (c *Connection) getOrCreateTopicInfo(ctx context.Context, getAlreadyOpenOnl
 		var ok bool
 		// Load the topic.
 		topic := c.Client.Topic(c.TopicID)
+		topic.EnableMessageOrdering = c.MessageOrdering
 		ok, ti.err = topic.Exists(ctx)
 		if ti.err != nil {
 			return
@@ -109,6 +113,7 @@ func (c *Connection) getOrCreateTopicInfo(ctx context.Context, getAlreadyOpenOnl
 				return
 			}
 			topic, ti.err = c.Client.CreateTopic(ctx, c.TopicID)
+			topic.EnableMessageOrdering = c.MessageOrdering
 			if ti.err != nil {
 				return
 			}
@@ -216,9 +221,10 @@ func (c *Connection) getOrCreateSubscriptionInfo(ctx context.Context, getAlready
 			// with the given name.
 			// TODO: allow to use push config + allow setting the SubscriptionConfig.
 			sub, si.err = c.Client.CreateSubscription(ctx, c.SubscriptionID, pubsub.SubscriptionConfig{
-				Topic:             topic,
-				AckDeadline:       *c.AckDeadline,
-				RetentionDuration: *c.RetentionDuration,
+				Topic:                 topic,
+				AckDeadline:           *c.AckDeadline,
+				RetentionDuration:     *c.RetentionDuration,
+				EnableMessageOrdering: topic.EnableMessageOrdering,
 			})
 			if si.err != nil {
 				return
